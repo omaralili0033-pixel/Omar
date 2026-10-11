@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f1d2e">
+<title>Agent Code</title>
+<style>
+:root{
+  --bg:#f6f5fa; --card:#ffffff; --text:#1c1b24; --muted:#6b6880; --accent:#6d4aff;
+  --user:#6d4aff; --usertext:#fff; --border:#e2e0ee; --code:#14121f; --codetext:#e8e6f5;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14121f; --card:#1f1d2e; --text:#ece9f8; --muted:#9a96b3; --border:#322f47; --code:#0c0b14;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+#app{display:flex;flex-direction:column;height:100dvh}
+header{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+  background:var(--card);border-bottom:1px solid var(--border)}
+header h1{font-size:17px;margin:0;flex:1}
+.ib{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;
+  padding:7px 10px;font-size:14px}
+#chat{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.msg{max-width:92%;padding:10px 12px;border-radius:16px;word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap}
+.user{align-self:flex-end;background:var(--user);color:var(--usertext);border-bottom-right-radius:4px}
+.bot{align-self:flex-start;background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
+.tool{align-self:flex-start;font-size:13px;color:var(--muted);background:transparent;border:1px dashed var(--border);
+  padding:6px 10px;border-radius:10px;max-width:92%;overflow-wrap:anywhere}
+pre{background:var(--code);color:var(--codetext);padding:10px;border-radius:10px;overflow-x:auto;
+  font:13px/1.4 ui-monospace,Menlo,monospace;margin:6px 0;white-space:pre}
+.sys{align-self:center;color:var(--muted);font-size:13px;text-align:center}
+#bar{display:flex;gap:8px;padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);
+  background:var(--card);border-top:1px solid var(--border)}
+#inp{flex:1;resize:none;max-height:140px;border:1px solid var(--border);background:var(--bg);color:var(--text);
+  border-radius:14px;padding:10px 12px;font:inherit}
+#send{border:0;background:var(--accent);color:#fff;border-radius:14px;padding:0 16px;font-size:16px;font-weight:600}
+#send:disabled{opacity:.5}
+.panel{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:10}
+.panel.open{display:flex}
+.panel .top{display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
+  background:var(--card);border-bottom:1px solid var(--border)}
+.panel .top b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.panel .body{flex:1;overflow:auto;padding:12px}
+.panel iframe{flex:1;border:0;width:100%;background:#fff}
+.row{display:flex;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:8px}
+.row span{flex:1;overflow-wrap:anywhere}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input[type=password],input[type=text]{width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font:inherit}
+.btn{border:0;background:var(--accent);color:#fff;border-radius:12px;padding:12px 16px;font:inherit;font-weight:600;margin-top:14px}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🤖 Agent Code</h1>
+    <button class="ib" id="bFiles">📁 Fichiers</button>
+    <button class="ib" id="bNew">＋</button>
+    <button class="ib" id="bSet">⚙️</button>
+  </header>
+  <div id="chat"></div>
+  <div id="bar">
+    <textarea id="inp" rows="1" placeholder="Décris ce que tu veux programmer…"></textarea>
+    <button id="send">Envoyer</button>
+  </div>
+</div>
+
+<!-- Réglages -->
+<div class="panel" id="pSet">
+  <div class="top"><b>Réglages</b><button class="ib" data-close="pSet">Fermer</button></div>
+  <div class="body">
+    <label>Clé API Anthropic</label>
+    <input type="password" id="key" placeholder="sk-ant-..." autocomplete="off">
+    <label>Modèle</label>
+    <input type="text" id="model" placeholder="claude-sonnet-5-5">
+    <button class="btn" id="saveSet">Enregistrer</button>
+    <p class="note">La clé reste uniquement dans le stockage local de ton téléphone et n'est envoyée qu'à api.anthropic.com. Ne partage pas cette page avec ta clé enregistrée.</p>
+  </div>
+</div>
+
+<!-- Fichiers -->
+<div class="panel" id="pFiles">
+  <div class="top"><b>Fichiers du projet</b><button class="ib" data-close="pFiles">Fermer</button></div>
+  <div class="body" id="fileList"></div>
+</div>
+
+<!-- Aperçu / visionneuse -->
+<div class="panel" id="pView">
+  <div class="top"><b id="vTitle"></b><button class="ib" id="vDl">⬇︎</button><button class="ib" data-close="pView">Fermer</button></div>
+  <iframe id="vFrame" sandbox="allow-scripts"></iframe>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v===null? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
+};
+
+// ---------- Système de fichiers virtuel (persisté) ----------
+let FS = {};
+try{ FS = JSON.parse(store.get("agent_fs", "{}")); }catch(e){ FS = {}; }
+const saveFS = () => store.set("agent_fs", JSON.stringify(FS));
+const normPath = p => String(p||"").replace(/^\/+/, "").replace(/\.\.+\//g, "");
+
+// ---------- Outils ----------
+const TOOLS = [
+  { name:"list_files", description:"Liste tous les fichiers du projet.",
+    input_schema:{type:"object", properties:{}} },
+  { name:"read_file", description:"Lit un fichier du projet.",
+    input_schema:{type:"object", properties:{path:{type:"string"}}, required:["path"]} },
+  { name:"write_file", description:"Crée ou remplace un fichier du projet (contenu complet).",
+    input_schema:{type:"object", properties:{path:{type:"string"}, content:{type:"string"}}, required:["path","content"]} },
+  { name:"delete_file", description:"Supprime un fichier du projet.",
+    input_schema:{type:"object", properties:{path:{type:"string"}}, required:["path"]} },
+  { name:"run_js", description:"Exécute du JavaScript dans un bac à sable isolé (async/await possible, 10 s max). Retourne les console.log et la valeur retournée. La variable FILES contient les fichiers du projet.",
+    input_schema:{type:"object", properties:{code:{type:"string"}}, required:["code"]} },
+  { name:"preview_html", description:"Affiche un fichier HTML du projet en aperçu plein écran sur le téléphone de l'utilisateur.",
+    input_schema:{type:"object", properties:{path:{type:"string"}}, required:["path"]} }
+];
+
+function runJS(code){
+  return new Promise(resolve => {
+    const id = "r" + Math.random().toString(36).slice(2);
+    const safeFiles = JSON.stringify(FS).replace(/</g, "\\u003c");
+    const safeCode = String(code).replace(/<\/script/gi, "<\\/script");
+    const html = "<!doctype html><html><body><script>" +
+      "const FILES=" + safeFiles + ";const logs=[];const ID=" + JSON.stringify(id) + ";" +
+      "const fmt=a=>a.map(x=>{try{return typeof x==='object'?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(' ');" +
+      "['log','info'].forEach(k=>console[k]=(...a)=>logs.push(fmt(a)));" +
+      "['warn','error'].forEach(k=>console[k]=(...a)=>logs.push(k+': '+fmt(a)));" +
+      "const done=()=>parent.postMessage({id:ID,logs},'*');" +
+      "window.onerror=m=>{logs.push('erreur: '+m);done();};" +
+      "(async()=>{try{const r=await(async()=>{\n" + safeCode + "\n})();" +
+      "if(r!==undefined)logs.push('retour: '+JSON.stringify(r));}catch(e){logs.push('erreur: '+e.message);}done();})();" +
+      "<\/script></body></html>";
+    const f = document.createElement("iframe");
+    f.sandbox = "allow-scripts"; f.style.display = "none"; f.srcdoc = html;
+    let finished = false;
+    const end = out => { if(finished) return; finished = true; window.removeEventListener("message", onMsg); f.remove(); resolve(out); };
+    const onMsg = e => { if(e.source === f.contentWindow && e.data && e.data.id === id) end(e.data.logs.join("\n") || "(aucune sortie)"); };
+    window.addEventListener("message", onMsg);
+    setTimeout(() => end("erreur: délai de 10 s dépassé"), 10000);
+    document.body.appendChild(f);
+  });
+}
+
+async function execTool(name, a){
+  try{
+    if(name === "list_files"){ const k = Object.keys(FS); return k.length ? k.join("\n") : "(projet vide)"; }
+    if(name === "read_file"){ const p = normPath(a.path); return p in FS ? FS[p] : "Fichier introuvable : " + p; }
+    if(name === "write_file"){ const p = normPath(a.path); FS[p] = String(a.content); saveFS(); renderFiles(); return "Fichier écrit : " + p; }
+    if(name === "delete_file"){ const p = normPath(a.path); delete FS[p]; saveFS(); renderFiles(); return "Supprimé : " + p; }
+    if(name === "run_js"){ return await runJS(a.code); }
+    if(name === "preview_html"){ const p = normPath(a.path); if(!(p in FS)) return "Fichier introuvable : " + p; openView(p, true); return "Aperçu affiché."; }
+    return "Outil inconnu : " + name;
+  }catch(e){ return "Erreur : " + e.message; }
+}
+
+// ---------- Interface ----------
+const chat = $("chat");
+function esc(s){ return s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function renderMd(t){
+  return t.split("```").map((part, i) => {
+    if(i % 2 === 1){ return "<pre>" + esc(part.replace(/^[^\n]*\n/, "")) + "</pre>"; }
+    return esc(part);
+  }).join("");
+}
+function addMsg(cls, text, md){
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if(md) d.innerHTML = renderMd(text); else d.textContent = text;
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+}
+function addNote(cls, text){
+  const d = document.createElement("div"); d.className = cls; d.textContent = text;
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight;
+}
+function openPanel(id){ $(id).classList.add("open"); }
+function closePanel(id){ $(id).classList.remove("open"); }
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => closePanel(b.dataset.close));
+
+let viewing = null;
+function openView(path, asHtml){
+  viewing = path;
+  $("vTitle").textContent = path;
+  const content = FS[path] || "";
+  const isHtml = asHtml || /\.html?$/i.test(path);
+  $("vFrame").srcdoc = isHtml ? content
+    : "<pre style='white-space:pre-wrap;word-wrap:break-word;font:13px monospace;padding:12px'>" + esc(content) + "</pre>";
+  openPanel("pView");
+}
+$("vDl").onclick = () => {
+  if(!viewing) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([FS[viewing] || ""], {type:"text/plain"}));
+  a.download = viewing.split("/").pop(); a.click();
+};
+function renderFiles(){
+  const box = $("fileList"); box.innerHTML = "";
+  const keys = Object.keys(FS);
+  if(!keys.length){ box.innerHTML = "<p class='note'>Aucun fichier pour l'instant. Demande à l'agent d'en créer.</p>"; return; }
+  keys.forEach(k => {
+    const r = document.createElement("div"); r.className = "row";
+    const s = document.createElement("span"); s.textContent = k;
+    const v = document.createElement("button"); v.className = "ib"; v.textContent = /\.html?$/i.test(k) ? "▶︎" : "👁";
+    v.onclick = () => openView(k);
+    const x = document.createElement("button"); x.className = "ib"; x.textContent = "🗑";
+    x.onclick = () => { delete FS[k]; saveFS(); renderFiles(); };
+    r.append(s, v, x); box.appendChild(r);
+  });
+}
+$("bFiles").onclick = () => { renderFiles(); openPanel("pFiles"); };
+$("bSet").onclick = () => { $("key").value = store.get("agent_key", ""); $("model").value = store.get("agent_model", "claude-sonnet-5-5"); openPanel("pSet"); };
+$("saveSet").onclick = () => {
+  store.set("agent_key", $("key").value.trim());
+  store.set("agent_model", $("model").value.trim() || "claude-sonnet-5-5");
+  closePanel("pSet");
+};
+
+// ---------- Boucle de l'agent ----------
+const SYSTEM = "Tu es un agent de programmation qui travaille sur un téléphone. Tu disposes d'un petit projet (fichiers virtuels) " +
+  "et d'un bac à sable JavaScript. Pour créer des applications, génère des pages HTML autonomes (HTML+CSS+JS dans un seul fichier), " +
+  "écris-les avec write_file puis montre-les avec preview_html. Teste ta logique avec run_js quand c'est utile. " +
+  "Les écrans sont petits : sois concis dans tes réponses. Réponds dans la langue de l'utilisateur.";
+let history = [];
+let busy = false;
+
+async function callAPI(){
+  const key = store.get("agent_key", "");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: store.get("agent_model", "claude-sonnet-5-5"),
+      max_tokens: 8192, system: SYSTEM, tools: TOOLS, messages: history
+    })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error((data.error && data.error.message) || ("HTTP " + res.status));
+  return data;
+}
+
+async function runAgent(task){
+  if(!store.get("agent_key", "")){ addNote("sys", "Ajoute d'abord ta clé API dans ⚙️"); $("bSet").click(); return; }
+  busy = true; $("send").disabled = true;
+  addMsg("user", task);
+  history.push({role:"user", content:task});
+  try{
+    for(let step = 0; step < 20; step++){
+      const r = await callAPI();
+      history.push({role:"assistant", content:r.content});
+      r.content.forEach(b => { if(b.type === "text" && b.text.trim()) addMsg("bot", b.text, true); });
+      if(r.stop_reason !== "tool_use") break;
+      const results = [];
+      for(const b of r.content){
+        if(b.type !== "tool_use") continue;
+        const label = b.input.path ? b.name + " → " + b.input.path : b.name;
+        addNote("tool", "🔧 " + label);
+        const out = await execTool(b.name, b.input);
+        if(b.name === "run_js") addNote("tool", "↳ " + out.slice(0, 300));
+        results.push({type:"tool_result", tool_use_id:b.id, content:String(out).slice(0, 20000)});
+      }
+      history.push({role:"user", content:results});
+      if(step === 19) addNote("sys", "⛔ Nombre maximum d'étapes atteint.");
+    }
+  }catch(e){
+    addNote("sys", "Erreur : " + e.message);
+    // Réinitialise l'historique si le dernier message est incohérent
+    const last = history[history.length - 1];
+    if(last && last.role === "assistant") history.pop();
+  }
+  busy = false; $("send").disabled = false;
+}
+
+$("send").onclick = () => {
+  const t = $("inp").value.trim();
+  if(!t || busy) return;
+  $("inp").value = ""; $("inp").style.height = "auto";
+  runAgent(t);
+};
+$("inp").addEventListener("input", e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 140) + "px"; });
+$("bNew").onclick = () => { if(busy) return; history = []; chat.innerHTML = ""; addNote("sys", "Nouvelle conversation (les fichiers sont conservés)."); };
+
+addNote("sys", "Agent prêt. Essaie : « Fais-moi une calculatrice » ou « Crée un jeu de morpion ».");
+</script>
+</body>
+</html>
